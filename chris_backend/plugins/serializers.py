@@ -15,7 +15,8 @@ class PluginSerializer(serializers.HyperlinkedModelSerializer):
         model = Plugin
         fields = ('url', 'name', 'dock_image', 'type', 'authors', 'title', 'category',
                   'description', 'documentation', 'license', 'version',
-                  'parameters', 'instances')
+                  'parameters', 'instances', 'min_number_of_workers',
+                  'max_number_of_workers','cpu_limit','memory_limit')
 
 
 class PluginParameterSerializer(serializers.HyperlinkedModelSerializer):

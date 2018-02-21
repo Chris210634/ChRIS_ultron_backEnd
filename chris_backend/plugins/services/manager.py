@@ -115,7 +115,17 @@ class PluginManager(object):
         plugin.documentation = app_repr['documentation']
         plugin.license = app_repr['license']
         plugin.version = app_repr['version']
+        if 'max_number_of_workers' in app_repr:
+            plugin.max_number_of_workers = app_repr['max_number_of_workers']
+        if 'min_number_of_workers' in app_repr:
+            plugin.min_number_of_workers = app_repr['min_number_of_workers']
+        if 'cpu_limit' in app_repr:
+            plugin.cpu_limit = app_repr['cpu_limit']
+        if 'memory_limit' in app_repr:
+            plugin.memory_limit = app_repr['memory_limit']
+
         plugin.save()
+        self.check_plugin_values(plugin)
 
         # add plugin's parameters to the db
         params = app_repr['parameters']
@@ -159,6 +169,14 @@ class PluginManager(object):
         plugin.documentation = app_repr['documentation']
         plugin.license = app_repr['license']
         plugin.version = app_repr['version']
+        if 'max_number_of_workers' in app_repr:
+            plugin.max_number_of_workers = app_repr['max_number_of_workers']
+        if 'min_number_of_workers' in app_repr:
+            plugin.min_number_of_workers = app_repr['min_number_of_workers']
+        if 'cpu_limit' in app_repr:
+            plugin.cpu_limit = app_repr['cpu_limit']
+        if 'memory_limit' in app_repr:
+            plugin.memory_limit = app_repr['memory_limit']
 
         # add there are new parameters then add them
         new_params = app_repr['parameters']
@@ -169,6 +187,34 @@ class PluginManager(object):
 
         plugin.modification_date = timezone.now()
         plugin.save()
+        self.check_plugin_values(plugin)
+        
+    def check_plugin_values(self, plugin):
+        """
+        Make sure that the values given by the plugin are valid.
+        Prequisite: plugin is saved.
+        """
+        if plugin.max_number_of_workers < plugin.min_number_of_workers:
+            plugin.delete()
+            raise ValueError("Unable to register plugin.\
+                              Max Number of Workers is smaller than Min number of Workers.")
+        try:
+            int_val = int(plugin.memory_limit[:-2])
+            assert plugin.memory_limit[-2:] in ['Mi','Gi']
+            if plugin.memory_limit[-2:] is 'Mi':
+                assert int_val >= 128
+        except (AssertionError, ValueError):
+            plugin.delete()
+            raise ValueError("Unable to register plugin. Memory Limit format incorrect.\
+                              Format is xMi or xGi where x is an integer. must be >= 128Mi.")
+        try:
+            int_val = int(plugin.cpu_limit[:-1])
+            assert plugin.cpu_limit[-1] is 'm'
+            assert int_val >= 250
+        except (AssertionError, ValueError):
+            plugin.delete()
+            raise ValueError("Unable to register plugin. CPU Limit format incorrect.\
+                              Format is xm where x is an integer. must be >= 250m.")
 
     def run(self, args=None):
         """
@@ -192,6 +238,7 @@ class PluginManager(object):
         # to the plugin input and output dir spaces.
         str_inputDirOverride        = ''
         str_outputDirOverride       = ''
+        number_of_workers           = 1
 
         for k, v in kwargs.items():
             if k == 'useDebug':             self.b_useDebug         = v
@@ -201,6 +248,8 @@ class PluginManager(object):
             if k == 'inputDirOverride':     str_inputDirOverride    = v
             if k == 'outputDirOverride':    str_outputDirOverride   = v
             if k == 'IOPhost':              self.str_IOPhost        = v
+            if k == 'number_of_workers':    number_of_workers       = v
+        print("number of workers is ", number_of_workers)
 
         plugin_repr = self.get_plugin_app_representation(plugin_inst.plugin.dock_image)
         # get input dir
@@ -246,7 +295,8 @@ class PluginManager(object):
             inputdir    = inputdirManagerFS,
             outputdir   = outputdirManagerFS,
             IOPhost     = self.str_IOPhost,
-            quiet       = True
+            number_of_workers = number_of_workers,
+            quiet       = False
         )
 
         # Some dev notes...

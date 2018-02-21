@@ -53,7 +53,8 @@ services:
       role: "swift object storage service"
 
   pfcon_service:
-    image:  ${CREPO}/pfcon${TAG}
+    image:  local/pfcon
+    network_mode: "host"
     volumes:
       - ./FS/data:/data
     command: ["--forever", "--httpResponse"]

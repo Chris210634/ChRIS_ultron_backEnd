@@ -47,4 +47,24 @@ class Migration(migrations.Migration):
             name='version',
             field=models.CharField(blank=True, max_length=10),
         ),
+        migrations.AddField(
+            model_name='plugin',
+            name='max_number_of_workers',
+            field=models.IntegerField(default=1),
+        ),
+        migrations.AddField(
+            model_name='plugin',
+            name='min_number_of_workers',
+            field=models.IntegerField(default=1),
+        ),
+        migrations.AddField(
+            model_name='plugin',
+            name='cpu_limit',
+            field=models.CharField(default='2000m', max_length=10),
+        ),
+        migrations.AddField(
+            model_name='plugin',
+            name='memory_limit',
+            field=models.CharField(default='200Mi', max_length=10),
+        )
     ]

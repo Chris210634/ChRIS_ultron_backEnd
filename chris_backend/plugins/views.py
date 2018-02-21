@@ -15,6 +15,7 @@ from .serializers import PluginInstanceSerializer
 from .permissions import IsChrisOrReadOnly
 from .services.manager import PluginManager
 
+from math import log2
 
 class PluginList(generics.ListAPIView):
     """
@@ -111,6 +112,7 @@ class PluginInstanceList(generics.ListCreateAPIView):
         """
         plugin = self.get_object()
         request_data = serializer.context['request'].data
+        print(serializer.context['request'].data)
         # get previous plugin instance
         previous_id = ""
         if 'previous_id' in request_data:
@@ -122,6 +124,7 @@ class PluginInstanceList(generics.ListCreateAPIView):
         # collect parameters from the request and validate and save them to the DB 
         parameters = plugin.parameters.all()
         parameters_dict = {}
+        print('parameters: ', parameters)
         for parameter in parameters:
             if parameter.name in request_data:
                 data = {'value': request_data[parameter.name]}
@@ -129,10 +132,36 @@ class PluginInstanceList(generics.ListCreateAPIView):
                 parameter_serializer.is_valid(raise_exception=True)
                 parameter_serializer.save(plugin_inst=plugin_inst, plugin_param=parameter)
                 parameters_dict[parameter.name] = request_data[parameter.name]
+
+        # configure the number of workers for parallel plugins
+        number_of_workers = plugin.min_number_of_workers # default
+        if "number_of_workers" in request_data:
+            number_of_workers = int(request_data["number_of_workers"])
+        elif "priority" in request_data:
+            # Priority on scale 0-10
+            # 0 maps to min number of workers, 10 maps to max number of workers
+            priority = int(request_data["priority"])
+            if priority < 0:
+                priority = 0
+            elif priority > 10:
+                priority = 10
+            log_min = log2(plugin.min_number_of_workers)
+            log_max = log2(plugin.max_number_of_workers)
+            log_n_workers = log_min + priority / 10 * (log_max - log_min)
+            number_of_workers = round(2 ** log_n_workers)
+        if number_of_workers > plugin.max_number_of_workers:
+            number_of_workers = plugin.max_number_of_workers
+        elif number_of_workers < plugin.min_number_of_workers:
+            number_of_workers = plugin.min_number_of_workers
+
+        print("vews.py: *** number of workers set to: ", number_of_workers, " ***")
+        print("parameter dict: ", parameters_dict)
+
         # run the plugin's app
         pl_manager = PluginManager()
         pl_manager.run_plugin_app(  plugin_inst, 
                                     parameters_dict,
+                                    number_of_workers   = number_of_workers,
                                     service             = 'pfcon',
                                     inputDirOverride    = '/share/incoming',
                                     outputDirOverride   = '/share/outgoing',

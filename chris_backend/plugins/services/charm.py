@@ -150,6 +150,7 @@ class Charm():
 
         self.LC                     = 40
         self.RC                     = 40
+        self.number_of_workers      = 1
 
         for key, val in kwargs.items():
             if key == 'app_args':       self.l_appArgs      = val
@@ -163,6 +164,7 @@ class Charm():
             if key == 'debugFile':      self.str_debugFile  = val
             if key == 'quiet':          self.b_quiet        = val
             if key == 'IOPhost':        self.str_IOPhost    = val
+            if key == 'number_of_workers': self.number_of_workers = val
 
         if self.b_useDebug:
             self.debug                  = pfurl.Message(logTo = self.str_debugFile)
@@ -342,6 +344,8 @@ class Charm():
         if self.str_debugFile == '/dev/null':
             str_debugFile   = self.str_debugFile
 
+        str_http = "10.195.149.138:5005"
+
         serviceCall = pfurl.Pfurl(
             msg                     = json.dumps(d_msg),
             http                    = str_http,
@@ -466,11 +470,13 @@ class Charm():
         """
 
         str_service     = 'pfcon'
-        str_IOPhost     = 'localhost'
+        str_IOPhost     = 'host'
 
         for k,v in kwargs.items():
             if k == 'service':  str_service = v
             if k == 'IOPhost':  str_IOPhost = v
+
+        str_IOPhost     = 'openshiftlocal'
 
         # pudb.set_trace()
         
@@ -554,10 +560,13 @@ class Charm():
 
                 "meta-compute":  
                 {
-                    'cmd':      "$execshell " + self.str_cmd,
-                    'threaded': True,
-                    'auid':     self.c_pluginInst.owner.username,
-                    'jid':      str(self.d_pluginInst['id']),
+                    'cmd':               "$execshell " + self.str_cmd,
+                    'threaded':          True,
+                    'auid':              self.c_pluginInst.owner.username,
+                    'jid':               str(self.d_pluginInst['id']),
+                    'number_of_workers': str(self.number_of_workers),
+                    'cpu_limit':         self.c_pluginInst.plugin.cpu_limit,
+                    'memory_limit':      self.c_pluginInst.plugin.memory_limit,
                     "container":   
                     {
                         "target": 

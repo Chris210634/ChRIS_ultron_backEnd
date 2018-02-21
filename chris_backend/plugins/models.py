@@ -36,6 +36,10 @@ class Plugin(models.Model):
     documentation = models.CharField(max_length=800, blank=True)
     license = models.CharField(max_length=50, blank=True)
     version = models.CharField(max_length=10, blank=True)
+    min_number_of_workers = models.IntegerField(default=1)
+    max_number_of_workers = models.IntegerField(default=1)
+    cpu_limit = models.CharField(max_length=10, default='2000m')
+    memory_limit = models.CharField(max_length=10, default='200Mi')
 
     class Meta:
         ordering = ('type',)
